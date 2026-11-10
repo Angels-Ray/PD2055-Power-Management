@@ -1,0 +1,6 @@
+id=pd2055_charge
+name=PD2055 Charge
+version=0.1.0
+versionCode=100
+author=Angels-Ray
+description=Caps USB input current on vivo iQOO Neo5 fast charging
