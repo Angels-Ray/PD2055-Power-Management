@@ -123,7 +123,7 @@ KernelSU 的动作按钮在 `pause` 和 `resume` 之间切换。
 
 ## App
 
-模块 zip 包含 `app/PD2055PowerManagement.apk`，包名 `com.pd2055.charge`，版本 1.1.1。这个 APK 是普通 Android app，不是 LSPosed 模块。它只有一个 Activity，没有 service、receiver、定时任务、wakelock 和网络权限。
+模块 zip 包含 `app/PD2055PowerManagement.apk`，包名 `com.pd2055.powermanagement`，版本 1.1.2。这个 APK 是普通 Android app，不是 LSPosed 模块。它只有一个 Activity，没有 service、receiver、定时任务、wakelock 和网络权限。
 
 界面顶部是状态卡片。第一行显示 SOC、电池状态和是否快充。下面显示电池温度、主板温度、输入电压和输入电流上限、电池电流、当前目标和原因。再下面显示模块开关、守护进程、直充和提速状态。温控打开时，最后一行显示温度区温度和当前规则。
 

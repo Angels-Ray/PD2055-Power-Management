@@ -123,7 +123,7 @@ The KernelSU action button toggles `pause` and `resume`.
 
 ## App
 
-The module zip includes `app/PD2055PowerManagement.apk`, package `com.pd2055.charge`, version 1.1.1. The APK is a plain Android app, not an LSPosed module. It has one Activity and no service, receiver, scheduled job, wakelock or network permission.
+The module zip includes `app/PD2055PowerManagement.apk`, package `com.pd2055.powermanagement`, version 1.1.2. The APK is a plain Android app, not an LSPosed module. It has one Activity and no service, receiver, scheduled job, wakelock or network permission.
 
 The top of the screen is a status card. The first line shows SOC, battery status and whether charging is fast. Below it are the battery and board temperatures, the input voltage and input current ceiling, the battery current, and the current target and reason. The next line shows the module switch, daemon, direct charge and boost state. With thermal control on, the last line shows the zone temperature and active rule.
 

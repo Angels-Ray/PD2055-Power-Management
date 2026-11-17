@@ -1,4 +1,4 @@
-package com.pd2055.charge;
+package com.pd2055.powermanagement;
 
 import android.app.Activity;
 import android.content.res.Configuration;

@@ -1,6 +1,6 @@
 id=pd2055_power_management
 name=PD2055 Power Management
-version=0.1.2
-versionCode=102
+version=0.1.3
+versionCode=103
 author=Angels-Ray
 description=Caps USB input current, raises direct-charge battery current, stops charging at a set SOC and controls CPU frequency, CPU online state and charging by temperature on the vivo iQOO Neo5. Includes a config app.
