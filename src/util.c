@@ -57,22 +57,63 @@ int read_int_file(const char *path, int *out)
 	return 0;
 }
 
+static int online_node_allowed(const char *path)
+{
+	static const char prefix[] = "/sys/devices/system/cpu/cpu";
+	const char *p = path + sizeof(prefix) - 1;
+	char cpu;
+
+	if (strncmp(path, prefix, sizeof(prefix) - 1))
+		return 0;
+	cpu = *p;
+	if (cpu < '5' || cpu > '7')
+		return 0;
+	return !strcmp(p + 1, "/online");
+}
+
+static int node_allowed(const char *path)
+{
+	static const char *const nodes[] = {
+		PD_CTM_NODE,
+		PD_CABLE_MOHM_NODE,
+		PD_SET_MA_NODE,
+		PD_HEARTBEAT_NODE,
+		PD_CPU_TAKEOVER_NODE,
+		PD_CPU_PROBE_NODE,
+		PD_CPU_MAX0_NODE,
+		PD_CPU_MAX4_NODE,
+		PD_CPU_MAX7_NODE,
+		PD_CPU_APPLY_NODE,
+		PD_CPU_SAFETY_NODE,
+	};
+	size_t i;
+
+	if (online_node_allowed(path))
+		return 1;
+
+	for (i = 0; i < sizeof(nodes) / sizeof(nodes[0]); i++) {
+		if (!strcmp(path, nodes[i]))
+			return 1;
+	}
+
+	return 0;
+}
+
 int is_write_allowed(const char *path)
 {
-	static const char *const node = PD_CTM_NODE;
 	const char *logical;
 
 	if (!path)
 		return 0;
 
-	if (!strcmp(path, node))
+	if (node_allowed(path))
 		return 1;
 
 	if (strncmp(path, "/tmp/", 5) && strncmp(path, "/data/local/tmp/", 16))
 		return 0;
 
 	logical = strstr(path, "/sys/");
-	return logical && !strcmp(logical, node);
+	return logical && node_allowed(logical);
 }
 
 int write_int_file(const char *path, int value)

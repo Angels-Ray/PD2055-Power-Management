@@ -51,28 +51,49 @@ static int read_first_text(const struct context *ctx, const char *const *paths,
 	return -1;
 }
 
-int charger_online(const struct context *ctx)
+void charger_state(const struct context *ctx, int *online, int *charging)
 {
 	char full[PD_PATH_MAX];
 	char status[32];
 	int value;
 
+	*online = 0;
+	*charging = 0;
+
 	path_join(full, sizeof(full), ctx->root,
 		  "/sys/class/power_supply/battery/status");
-	if (read_text_file(full, status, sizeof(status)) >= 0)
-		return !strcmp(status, "Charging") || !strcmp(status, "Full");
+	if (read_text_file(full, status, sizeof(status)) >= 0) {
+		*online = !strcmp(status, "Charging") || !strcmp(status, "Full");
+		*charging = !strcmp(status, "Charging");
+		return;
+	}
 
 	path_join(full, sizeof(full), ctx->root,
 		  "/sys/class/power_supply/usb/online");
-	if (read_int_file(full, &value) == 0)
-		return value > 0;
+	if (read_int_file(full, &value) == 0) {
+		*online = value > 0;
+		*charging = *online;
+		return;
+	}
 
 	path_join(full, sizeof(full), ctx->root,
 		  "/sys/class/power_supply/pc_port/online");
-	if (read_int_file(full, &value) == 0)
-		return value > 0;
+	if (read_int_file(full, &value) == 0) {
+		*online = value > 0;
+		*charging = *online;
+	}
+}
 
-	return 0;
+int dchg_active(const struct context *ctx)
+{
+	char full[PD_PATH_MAX];
+	char state[32];
+
+	path_join(full, sizeof(full), ctx->root, PD_DCHG_NODE);
+	if (read_text_file(full, state, sizeof(state)) < 0)
+		return 0;
+
+	return !strcmp(state, "dual chg normal.");
 }
 
 int telemetry_read(const struct context *ctx, struct telemetry *t)
@@ -137,14 +158,39 @@ int telemetry_read(const struct context *ctx, struct telemetry *t)
 			    sizeof(t->charge_type)) < 0)
 		snprintf(t->charge_type, sizeof(t->charge_type), "Unknown");
 
-	if (!strcmp(t->charge_type, "Fast") || !strcmp(t->charge_type, "Turbo")) {
-		if (t->current_max_ua >= 1000000 || t->vbus_uv >= PD_VBUS_FAST_UV)
-			t->fast = 1;
-	} else if (t->current_max_ua >= 1000000 && t->vbus_uv >= PD_VBUS_FAST_UV) {
+	if (t->online)
+		t->dchg = dchg_active(ctx);
+
+	if (t->vbus_uv >= PD_VBUS_FAST_UV) {
+		t->fast = 1;
+	} else if ((!strcmp(t->charge_type, "Fast") ||
+		    !strcmp(t->charge_type, "Turbo")) &&
+		   t->current_max_ua >= 1000000) {
 		t->fast = 1;
 	}
 
 	return 0;
+}
+
+static int derate_by_temp(const struct config *cfg, const struct telemetry *t,
+			  int ma, const char **reason)
+{
+	int battery_hot = t->batt_temp_dc > 0 &&
+			  t->batt_temp_dc >= cfg->temp_derate_dc;
+	int board_hot = t->board_temp_dc > 0 &&
+			t->board_temp_dc >= cfg->board_temp_derate_dc;
+
+	if (cfg->temp_derate_scale >= 100 || (!battery_hot && !board_hot))
+		return ma;
+
+	if (battery_hot && board_hot)
+		*reason = "temp-derate";
+	else if (battery_hot)
+		*reason = "battery-derate";
+	else
+		*reason = "board-derate";
+
+	return ma * cfg->temp_derate_scale / 100;
 }
 
 int policy_target(const struct config *cfg, const struct telemetry *t, const char **reason)
@@ -161,8 +207,8 @@ int policy_target(const struct config *cfg, const struct telemetry *t, const cha
 		*reason = "soc-unknown";
 		return 0;
 	}
-	if (t->soc >= cfg->soc_full) {
-		*reason = "soc";
+	if (t->soc >= cfg->charge_limit_soc) {
+		*reason = cfg->charge_limit_soc >= 100 ? "full" : "soc";
 		return 0;
 	}
 	if (t->batt_temp_dc > 0 && t->batt_temp_dc >= cfg->temp_stop_dc) {
@@ -179,23 +225,66 @@ int policy_target(const struct config *cfg, const struct telemetry *t, const cha
 	}
 
 	ma = cfg->max_input_ma;
-	if (t->soc > cfg->soc_mid) {
+	if (t->soc > cfg->soc_mid && cfg->soc_mid_scale < 100) {
 		ma = ma * cfg->soc_mid_scale / 100;
 		*reason = "soc-derate";
 	}
-	if (t->batt_temp_dc > 0 && t->batt_temp_dc >= cfg->temp_derate_dc) {
-		ma = ma * 60 / 100;
-		*reason = "battery-derate";
-	}
-	if (t->board_temp_dc > 0 && t->board_temp_dc >= cfg->board_temp_derate_dc) {
-		ma = ma * 60 / 100;
-		*reason = "board-derate";
-	}
+	ma = derate_by_temp(cfg, t, ma, reason);
 
 	if (ma < cfg->min_input_ma)
 		ma = cfg->min_input_ma;
 	if (ma > PD_HARD_MAX_INPUT_MA)
 		ma = PD_HARD_MAX_INPUT_MA;
+
+	return ma;
+}
+
+int boost_target_ma(const struct config *cfg, const struct telemetry *t,
+		    const char **reason)
+{
+	int ma;
+
+	*reason = "active";
+
+	if (!cfg->boost_enabled) {
+		*reason = "disabled";
+		return 0;
+	}
+	if (!t->online) {
+		*reason = "offline";
+		return 0;
+	}
+	if (!t->dchg) {
+		*reason = "not-dchg";
+		return 0;
+	}
+	if (t->soc < 0) {
+		*reason = "soc-unknown";
+		return 0;
+	}
+	if (t->soc >= cfg->charge_limit_soc) {
+		*reason = cfg->charge_limit_soc >= 100 ? "full" : "soc-limit";
+		return 0;
+	}
+	if (t->soc >= cfg->boost_soc_max) {
+		*reason = "soc";
+		return 0;
+	}
+	if (t->batt_temp_dc > 0 && t->batt_temp_dc >= cfg->temp_stop_dc) {
+		*reason = "battery-temp";
+		return 0;
+	}
+	if (t->board_temp_dc > 0 && t->board_temp_dc >= cfg->board_temp_stop_dc) {
+		*reason = "board-temp";
+		return 0;
+	}
+
+	ma = derate_by_temp(cfg, t, cfg->boost_ma, reason);
+
+	if (ma < PD_BOOST_MIN_MA)
+		ma = PD_BOOST_MIN_MA;
+	if (ma > PD_HARD_MAX_FCC_MA)
+		ma = PD_HARD_MAX_FCC_MA;
 
 	return ma;
 }

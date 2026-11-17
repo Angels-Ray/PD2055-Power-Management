@@ -11,3 +11,18 @@ if [ ! -f "$CONF_DIR/config.conf" ]; then
 	cp "$MODPATH/config.conf" "$CONF_DIR/config.conf"
 	chmod 0600 "$CONF_DIR/config.conf"
 fi
+
+APP="$MODPATH/app/PD2055Charge.apk"
+if [ -f "$APP" ]; then
+	if /system/bin/pm install -r "$APP" >/dev/null 2>&1; then
+		ui_print "- 已安装管理 app"
+	else
+		ui_print "- 管理 app 未自动安装"
+		if cp "$APP" /data/local/tmp/PD2055Charge.apk 2>/dev/null; then
+			chmod 0644 /data/local/tmp/PD2055Charge.apk
+			ui_print "  手动安装：adb shell pm install -r /data/local/tmp/PD2055Charge.apk"
+		else
+			ui_print "  手动安装：adb shell pm install -r $APP"
+		fi
+	fi
+fi
