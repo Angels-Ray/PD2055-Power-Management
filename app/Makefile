@@ -19,9 +19,9 @@ ZIP := /usr/bin/zip
 BUILD := build
 CLASSES := $(BUILD)/classes
 DEX := $(BUILD)/dex
-UNSIGNED := $(BUILD)/PD2055Charge-unsigned.apk
-ALIGNED := $(BUILD)/PD2055Charge-aligned.apk
-APK := ../build/PD2055Charge.apk
+UNSIGNED := $(BUILD)/PD2055PowerManagement-unsigned.apk
+ALIGNED := $(BUILD)/PD2055PowerManagement-aligned.apk
+APK := ../build/PD2055PowerManagement.apk
 KEYSTORE ?= $(HOME)/.android/debug.keystore
 KEY_ALIAS ?= androiddebugkey
 KEY_PASS ?= android
@@ -51,7 +51,7 @@ $(DEX)/classes.dex: $(BUILD)/classes.stamp
 
 $(UNSIGNED): $(DEX)/classes.dex AndroidManifest.xml | $(BUILD)
 	$(AAPT2) link -o $@ -I "$(PLATFORM_JAR)" --manifest AndroidManifest.xml
-	cd $(BUILD) && $(ZIP) -q -j PD2055Charge-unsigned.apk dex/classes.dex
+	cd $(BUILD) && $(ZIP) -q -j PD2055PowerManagement-unsigned.apk dex/classes.dex
 
 $(KEYSTORE):
 	mkdir -p $(dir $@)

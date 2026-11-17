@@ -37,7 +37,7 @@ import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
     private static final String PDCHARGE =
-            "/data/adb/modules/pd2055_charge/bin/pdcharge";
+            "/data/adb/modules/pd2055_power_management/bin/pdcharge";
     private static final int ROOT_TIMEOUT_S = 30;
     private static final long STATUS_INTERVAL_MS = 10000;
     private static final Pattern STATUS_PAIR =
@@ -583,7 +583,7 @@ public class MainActivity extends Activity {
         if (message != null && (message.contains("Cannot run program")
                 || message.contains("Operation not permitted"))) {
             return "无法执行 su。请在 KernelSU 的超级用户列表中给"
-                    + " PD2055 充电控制授权。";
+                    + " PD2055 Power Management 授权。";
         }
         return e.toString();
     }

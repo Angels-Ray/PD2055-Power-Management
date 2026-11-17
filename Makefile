@@ -35,10 +35,10 @@ package: build/pdcharge kmod app
 	cp module.prop customize.sh service.sh uninstall.sh action.sh config.conf build/module/
 	cp build/pdcharge build/module/bin/pdcharge
 	cp build/psset.ko build/pd2055_cpufreq.ko build/module/kmod/
-	cp build/PD2055Charge.apk build/module/app/PD2055Charge.apk
+	cp build/PD2055PowerManagement.apk build/module/app/PD2055PowerManagement.apk
 	chmod 0755 build/module/*.sh build/module/bin/pdcharge
-	cd build/module && zip -qr ../PD2055-Charge-$(VERSION).zip .
-	@echo build/PD2055-Charge-$(VERSION).zip
+	cd build/module && zip -qr ../PD2055-Power-Management-$(VERSION).zip .
+	@echo build/PD2055-Power-Management-$(VERSION).zip
 
 build/drain-libs/libEGL.so:
 	@mkdir -p build/drain-libs

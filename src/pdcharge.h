@@ -10,8 +10,8 @@
 #define PD_VERSION "0.1.0"
 #endif
 
-#define PD_DATA_DIR "/data/adb/pd2055-charge"
-#define PD_MODULE_DIR "/data/adb/modules/pd2055_charge"
+#define PD_DATA_DIR "/data/adb/pd2055-power-management"
+#define PD_MODULE_DIR "/data/adb/modules/pd2055_power_management"
 #define PD_DISABLE_FILE PD_MODULE_DIR "/disable"
 #define PD_REMOVE_FILE PD_MODULE_DIR "/remove"
 #define PD_HARD_MAX_INPUT_MA 5000

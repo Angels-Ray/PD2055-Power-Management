@@ -169,7 +169,7 @@ int config_write_default(const char *path)
 	if (!fp)
 		return -1;
 
-	fputs("# PD2055 Charge\n"
+	fputs("# PD2055 Power Management\n"
 	      "# 电流单位 mA，温度单位 0.1 C，间隔单位 ms。\n"
 	      "\n"
 	      "# 启用控制\n"

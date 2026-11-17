@@ -1,4 +1,4 @@
-# PD2055 Charge
+# PD2055 Power Management
 
 [中文](README.zh-CN.md)
 
@@ -13,7 +13,7 @@ KernelSU module for the vivo iQOO Neo5 (PD2055). It stops charging at a set SOC.
 - CPU frequency takeover: `thermal_cpu`, enforced through a cpufreq notifier.
 - CPU online state: `thermal_online`, manages CPU5, CPU6 and CPU7 by the active rule.
 - Charge current cap by temperature: `thermal_charge`.
-- Configuration app: `app/PD2055Charge.apk`, one Activity, no background service.
+- Configuration app: `app/PD2055PowerManagement.apk`, one Activity, no background service.
 - Pause and resume: `pause`, `resume`, and the KernelSU action button.
 - Stop and restore nodes: `shutdown`.
 
@@ -27,23 +27,23 @@ KernelSU module for the vivo iQOO Neo5 (PD2055). It stops charging at a set SOC.
 
 Install the zip in KernelSU and soft reboot from KernelSU. `service.sh` starts `bin/pdcharge daemon` at boot.
 
-`customize.sh` tries `pm install -r` on `app/PD2055Charge.apk`. If the install fails, extract the APK from the zip and install it from the host:
+`customize.sh` tries `pm install -r` on `app/PD2055PowerManagement.apk`. If the install fails, extract the APK from the zip and install it from the host:
 
 ```
-adb install -r PD2055Charge.apk
+adb install -r PD2055PowerManagement.apk
 ```
 
 When `customize.sh` copied the APK to `/data/local/tmp`, install it on the device:
 
 ```
-adb shell pm install -r /data/local/tmp/PD2055Charge.apk
+adb shell pm install -r /data/local/tmp/PD2055PowerManagement.apk
 ```
 
-On the first run the app may report that it cannot execute `su`. Grant root to PD2055 充电控制 in the KernelSU superuser list.
+On the first run the app may report that it cannot execute `su`. Grant root to PD2055 Power Management in the KernelSU superuser list.
 
 ## Configuration
 
-The configuration file is `/data/adb/pd2055-charge/config.conf`.
+The configuration file is `/data/adb/pd2055-power-management/config.conf`.
 
 | Key | Default | Range | Unit | Description |
 | --- | --- | --- | --- | --- |
@@ -89,7 +89,7 @@ The daemon re-reads the configuration on the next poll when the file changes. `p
 ## Commands
 
 ```
-MOD=/data/adb/modules/pd2055_charge
+MOD=/data/adb/modules/pd2055_power_management
 $MOD/bin/pdcharge status
 $MOD/bin/pdcharge once
 $MOD/bin/pdcharge pause
@@ -123,7 +123,7 @@ The KernelSU action button toggles `pause` and `resume`.
 
 ## App
 
-The module zip includes `app/PD2055Charge.apk`, package `com.pd2055.charge`, version 1.1.0. The APK is a plain Android app, not an LSPosed module. It has one Activity and no service, receiver, scheduled job, wakelock or network permission.
+The module zip includes `app/PD2055PowerManagement.apk`, package `com.pd2055.charge`, version 1.1.1. The APK is a plain Android app, not an LSPosed module. It has one Activity and no service, receiver, scheduled job, wakelock or network permission.
 
 The top of the screen is a status card. The first line shows SOC, battery status and whether charging is fast. Below it are the battery and board temperatures, the input voltage and input current ceiling, the battery current, and the current target and reason. The next line shows the module switch, daemon, direct charge and boost state. With thermal control on, the last line shows the zone temperature and active rule.
 
@@ -139,13 +139,13 @@ The daemon checks the `disable` and `remove` markers in the module directory on 
 
 ## Files
 
-- `/data/adb/pd2055-charge/config.conf`: configuration.
-- `/data/adb/pd2055-charge/logs/pdcharge.log`: log. At daemon start a log larger than 128 KiB is renamed to `pdcharge.log.1`.
-- `/data/adb/pd2055-charge/state/`: pid file, pause marker, saved node values, `keep_soc_orig` and the `online_applied` marker.
-- `app/PD2055Charge.apk`: configuration app.
+- `/data/adb/pd2055-power-management/config.conf`: configuration.
+- `/data/adb/pd2055-power-management/logs/pdcharge.log`: log. At daemon start a log larger than 128 KiB is renamed to `pdcharge.log.1`.
+- `/data/adb/pd2055-power-management/state/`: pid file, pause marker, saved node values, `keep_soc_orig` and the `online_applied` marker.
+- `app/PD2055PowerManagement.apk`: configuration app.
 - `kmod/psset.ko`: kernel module used by the direct-charge boost.
 - `kmod/pd2055_cpufreq.ko`: kernel module used by the CPU frequency takeover.
-- `config.conf` in the module directory: default configuration. `customize.sh` copies it when `/data/adb/pd2055-charge/config.conf` does not exist.
+- `config.conf` in the module directory: default configuration. `customize.sh` copies it when `/data/adb/pd2055-power-management/config.conf` does not exist.
 
 ## How it works
 
@@ -242,7 +242,7 @@ The daemon reads the three nodes on every thermal tick and writes only a node th
 
 The daemon writes 1 to CPU5, CPU6 and CPU7 when `thermal_online=0`, when the temperature falls below the lowest rule, on `pause`, on module disable, on reload and on shutdown. The write happens only if the daemon applied an online state. A reload releases the state before loading the new configuration, so a rule change briefly brings all three CPUs online.
 
-When the daemon applies an online state, it creates `/data/adb/pd2055-charge/state/online_applied`. At the next daemon start, the marker makes the daemon write 1 to CPU5, CPU6 and CPU7 and remove the marker. This recovers from a daemon crash that left a core offline.
+When the daemon applies an online state, it creates `/data/adb/pd2055-power-management/state/online_applied`. At the next daemon start, the marker makes the daemon write 1 to CPU5, CPU6 and CPU7 and remove the marker. This recovers from a daemon crash that left a core offline.
 
 ### Direct-charge boost
 
@@ -345,7 +345,7 @@ make app
 make package
 ```
 
-`make` builds the static aarch64 binary at `build/pdcharge`. `make build/pdcharge-host` builds a host binary for local tests. `make kmod` builds `build/psset.ko` and `build/pd2055_cpufreq.ko`. `make app` builds `build/PD2055Charge.apk`. `make package` builds the binary, both kernel modules and the app. It writes `build/PD2055-Charge-<version>.zip`. The kernel modules are built against these trees in the PD2055 repository: `work/kernel-devsrc`, `work/kernel-4.19.125-build` and `work/kheaders/tree`. Set `KSRC`, `KOBJ` or `KHDR` to use other trees.
+`make` builds the static aarch64 binary at `build/pdcharge`. `make build/pdcharge-host` builds a host binary for local tests. `make kmod` builds `build/psset.ko` and `build/pd2055_cpufreq.ko`. `make app` builds `build/PD2055PowerManagement.apk`. `make package` builds the binary, both kernel modules and the app. It writes `build/PD2055-Power-Management-<version>.zip`. The kernel modules are built against these trees in the PD2055 repository: `work/kernel-devsrc`, `work/kernel-4.19.125-build` and `work/kheaders/tree`. Set `KSRC`, `KOBJ` or `KHDR` to use other trees.
 
 The app build uses JDK 17 `jdk17/jdk-17.0.21+9` under `$HOME/opt`, Android SDK build-tools 34.0.0 and the debug keystore at `$HOME/.android/debug.keystore`. Set `JAVA_HOME`, `ANDROID_HOME` or `KEYSTORE` to use other paths.
 

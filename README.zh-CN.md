@@ -1,4 +1,4 @@
-# PD2055 Charge
+# PD2055 Power Management
 
 [English](README.md)
 
@@ -13,7 +13,7 @@
 - CPU 频率接管：`thermal_cpu`，通过 cpufreq notifier 生效。
 - CPU 在线状态：`thermal_online`，按当前规则管理 CPU5、CPU6、CPU7。
 - 按温度限制充电电流：`thermal_charge`。
-- 配置 app：`app/PD2055Charge.apk`，单 Activity，无常驻服务。
+- 配置 app：`app/PD2055PowerManagement.apk`，单 Activity，无常驻服务。
 - 暂停和恢复：`pause`、`resume`，KernelSU 动作按钮。
 - 停止并恢复节点：`shutdown`。
 
@@ -27,23 +27,23 @@
 
 在 KernelSU 里安装 zip，然后用 KernelSU 软重启。`service.sh` 在开机时启动 `bin/pdcharge daemon`。
 
-`customize.sh` 对 `app/PD2055Charge.apk` 执行 `pm install -r`。安装失败时，从 zip 里取出 APK，在电脑上安装：
+`customize.sh` 对 `app/PD2055PowerManagement.apk` 执行 `pm install -r`。安装失败时，从 zip 里取出 APK，在电脑上安装：
 
 ```
-adb install -r PD2055Charge.apk
+adb install -r PD2055PowerManagement.apk
 ```
 
 `customize.sh` 把 APK 复制到 `/data/local/tmp` 时，在手机上安装：
 
 ```
-adb shell pm install -r /data/local/tmp/PD2055Charge.apk
+adb shell pm install -r /data/local/tmp/PD2055PowerManagement.apk
 ```
 
-第一次运行时，app 可能提示无法执行 `su`。在 KernelSU 的超级用户列表里给 PD2055 充电控制授权。
+第一次运行时，app 可能提示无法执行 `su`。在 KernelSU 的超级用户列表里给 PD2055 Power Management 授权。
 
 ## 配置
 
-配置文件是 `/data/adb/pd2055-charge/config.conf`。
+配置文件是 `/data/adb/pd2055-power-management/config.conf`。
 
 | 键 | 默认值 | 范围 | 单位 | 说明 |
 | --- | --- | --- | --- | --- |
@@ -89,7 +89,7 @@ thermal_rule=520,1171,1574,1632,1000,1,0
 ## 命令
 
 ```
-MOD=/data/adb/modules/pd2055_charge
+MOD=/data/adb/modules/pd2055_power_management
 $MOD/bin/pdcharge status
 $MOD/bin/pdcharge once
 $MOD/bin/pdcharge pause
@@ -123,7 +123,7 @@ KernelSU 的动作按钮在 `pause` 和 `resume` 之间切换。
 
 ## App
 
-模块 zip 包含 `app/PD2055Charge.apk`，包名 `com.pd2055.charge`，版本 1.1.0。这个 APK 是普通 Android app，不是 LSPosed 模块。它只有一个 Activity，没有 service、receiver、定时任务、wakelock 和网络权限。
+模块 zip 包含 `app/PD2055PowerManagement.apk`，包名 `com.pd2055.charge`，版本 1.1.1。这个 APK 是普通 Android app，不是 LSPosed 模块。它只有一个 Activity，没有 service、receiver、定时任务、wakelock 和网络权限。
 
 界面顶部是状态卡片。第一行显示 SOC、电池状态和是否快充。下面显示电池温度、主板温度、输入电压和输入电流上限、电池电流、当前目标和原因。再下面显示模块开关、守护进程、直充和提速状态。温控打开时，最后一行显示温度区温度和当前规则。
 
@@ -139,13 +139,13 @@ app 在前台时每 10 s 执行一次 `pdcharge status` 刷新状态，退到后
 
 ## 文件
 
-- `/data/adb/pd2055-charge/config.conf`：配置。
-- `/data/adb/pd2055-charge/logs/pdcharge.log`：日志。超过 128 KiB 时，守护进程启动时把它改名为 `pdcharge.log.1`。
-- `/data/adb/pd2055-charge/state/`：pid 文件、暂停标记、保存的节点值、`keep_soc_orig` 和 `online_applied` 标记。
-- `app/PD2055Charge.apk`：配置 app。
+- `/data/adb/pd2055-power-management/config.conf`：配置。
+- `/data/adb/pd2055-power-management/logs/pdcharge.log`：日志。超过 128 KiB 时，守护进程启动时把它改名为 `pdcharge.log.1`。
+- `/data/adb/pd2055-power-management/state/`：pid 文件、暂停标记、保存的节点值、`keep_soc_orig` 和 `online_applied` 标记。
+- `app/PD2055PowerManagement.apk`：配置 app。
 - `kmod/psset.ko`：直充提速使用的内核模块。
 - `kmod/pd2055_cpufreq.ko`：CPU 频率接管使用的内核模块。
-- 模块目录下的 `config.conf`：默认配置。`customize.sh` 在 `/data/adb/pd2055-charge/config.conf` 不存在时复制过去。
+- 模块目录下的 `config.conf`：默认配置。`customize.sh` 在 `/data/adb/pd2055-power-management/config.conf` 不存在时复制过去。
 
 ## 工作原理
 
@@ -242,7 +242,7 @@ notifier 不处理 `/sys/module/msm_thermal/core_control/cpus_offlined` 和 `/pr
 
 以下情况，守护进程向 CPU5、CPU6、CPU7 写 1：`thermal_online=0`、温度低于最低规则、`pause`、模块禁用、`reload` 和 `shutdown`。只有守护进程应用过在线状态时才写。`reload` 在加载新配置前释放状态，所以规则变化时三个 CPU 会短暂全部在线。
 
-守护进程应用在线状态时创建 `/data/adb/pd2055-charge/state/online_applied`。下一次守护进程启动时，这个标记让它向 CPU5、CPU6、CPU7 写 1 并删除标记。这样可以从守护进程崩溃后留下核心离线的状态恢复。
+守护进程应用在线状态时创建 `/data/adb/pd2055-power-management/state/online_applied`。下一次守护进程启动时，这个标记让它向 CPU5、CPU6、CPU7 写 1 并删除标记。这样可以从守护进程崩溃后留下核心离线的状态恢复。
 
 ### 直充提速
 
@@ -344,7 +344,7 @@ make app
 make package
 ```
 
-`make` 构建静态 aarch64 的 `build/pdcharge`。`make build/pdcharge-host` 构建本机测试用的可执行文件。`make kmod` 构建 `build/psset.ko` 和 `build/pd2055_cpufreq.ko`。`make app` 构建 `build/PD2055Charge.apk`。`make package` 构建二进制、两个内核模块和 app。它生成 `build/PD2055-Charge-<version>.zip`。内核模块使用 PD2055 仓库里的 `work/kernel-devsrc`、`work/kernel-4.19.125-build` 和 `work/kheaders/tree` 构建。设置 `KSRC`、`KOBJ` 或 `KHDR` 可以使用其他目录。
+`make` 构建静态 aarch64 的 `build/pdcharge`。`make build/pdcharge-host` 构建本机测试用的可执行文件。`make kmod` 构建 `build/psset.ko` 和 `build/pd2055_cpufreq.ko`。`make app` 构建 `build/PD2055PowerManagement.apk`。`make package` 构建二进制、两个内核模块和 app。它生成 `build/PD2055-Power-Management-<version>.zip`。内核模块使用 PD2055 仓库里的 `work/kernel-devsrc`、`work/kernel-4.19.125-build` 和 `work/kheaders/tree` 构建。设置 `KSRC`、`KOBJ` 或 `KHDR` 可以使用其他目录。
 
 app 构建使用 `$HOME/opt` 下的 JDK 17 `jdk17/jdk-17.0.21+9`、Android SDK build-tools 34.0.0，签名用 `$HOME/.android/debug.keystore`。设置 `JAVA_HOME`、`ANDROID_HOME` 或 `KEYSTORE` 可以使用其他路径。
 
